@@ -1,6 +1,7 @@
 package com.bruno.elevador.model;
 
 import com.bruno.elevador.enums.TipodeComportamento;
+import java.util.List;
 
 public class CentrodeControle {
 
@@ -18,12 +19,12 @@ public class CentrodeControle {
         this.tipodeComportamento = tipodeComportamento;
     }
 
-    public Elevador elevadorMaisProximo(int andarChamado, LIst<Elevador> elevadores) {
+    public Elevador elevadorMaisProximo(int andarChamado, List<Elevador> elevadores) {
         Elevador maisProximo = null;
         int menorDistancia = Integer.MAX_VALUE;
 
         for (Elevador elevador : elevadores) {
-            int distancia = Math.abs(elevador.getAndares() - andarChamado);
+            int distancia = Math.abs(elevador.getAndarAtual() - andarChamado);
 
             if (distancia < menorDistancia && !elevador.isLotado()) {
                 menorDistancia = distancia;

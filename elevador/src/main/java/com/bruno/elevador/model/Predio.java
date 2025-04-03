@@ -6,12 +6,12 @@ import java.util.Queue;
 public class Predio {
 
     private boolean horaPico;
-    private CentroControle centroControle;
+    private CentrodeControle centroControle;
     private List<Andar> andares;
     private List<Elevador> elevadores;
     private Queue<Pessoa> listaChegada;
 
-    public Predio(boolean horaPico, CentroControle centroControle, List<Andar> andares, Queue<Pessoa> listaChegada, List<Elevador> elevadores) {
+    public Predio(boolean horaPico, CentrodeControle centroControle, List<Andar> andares, Queue<Pessoa> listaChegada, List<Elevador> elevadores) {
         this.horaPico = horaPico;
         this.centroControle = centroControle;
         this.andares = andares;
@@ -28,11 +28,11 @@ public class Predio {
         this.horaPico = horaPico;
     }
 
-    public CentroControle getCentroControle() {
+    public CentrodeControle getCentroControle() {
         return centroControle;
     }
 
-    public void setCentroControle(CentroControle centroControle) {
+    public void setCentroControle(CentrodeControle centroControle) {
         this.centroControle = centroControle;
     }
 
