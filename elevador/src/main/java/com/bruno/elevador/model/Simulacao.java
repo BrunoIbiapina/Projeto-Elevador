@@ -1,4 +1,4 @@
-// Atualizado para lógica com relatório completo e prioridade
+// Atualizado para simular com apenas um painel fixo
 package com.bruno.elevador.model;
 
 import com.bruno.elevador.enums.Prioridade;
@@ -17,62 +17,33 @@ public class Simulacao {
     private static Map<String, Integer> momentoChamada = new HashMap<>();
     private static List<RelatorioPessoa> relatorioFinal = new ArrayList<>();
 
-    private static final Scanner scanner = new Scanner(System.in);
     private static Painel painel;
     private static Elevador elevador;
     private static final int TOTAL_ANDARES = 10;
     private static final int CAPACIDADE_MAXIMA = 5;
+    private static int ciclo = 1;
+    private static final Random random = new Random();
+    private static int contadorPessoas = 1;
 
     public static void simular() {
         painel = new Painel(null, 0);
         elevador = new Elevador(CAPACIDADE_MAXIMA, 0, painel);
 
-        new Thread(() -> {
-            while (true) {
-                try {
-                    System.out.print("Chamada (nome,origem,destino,prioridade) ou ENTER para ignorar: ");
-                    String linha = scanner.nextLine().trim();
-                    if (!linha.isEmpty()) {
-                        String[] partes = linha.split(",");
-                        if (partes.length == 4) {
-                            String nome = partes[0].trim();
-                            int origem = Integer.parseInt(partes[1].trim());
-                            int destino = Integer.parseInt(partes[2].trim());
-                            String prioridade = partes[3].trim().toLowerCase();
-                            prioridadePorPessoa.put(nome, prioridade);
-                            momentoChamada.put(nome, ciclo);
-
-                            synchronized (Simulacao.class) {
-                                if (origem == destino) return;
-                                if (passageiros.size() < CAPACIDADE_MAXIMA && origem == painel.getValor()) {
-                                    passageiros.add(nome);
-                                    destinoPorPessoa.putIfAbsent(destino, new ArrayList<>());
-                                    destinoPorPessoa.get(destino).add(nome);
-                                    if (!destinosPendentes.contains(destino)) destinosPendentes.add(destino);
-                                    System.out.println("✅ " + nome + " entrou diretamente no elevador");
-                                } else {
-                                    chamadasExternas.put(origem, nome + ";" + destino);
-                                    if (!destinosPendentes.contains(origem)) destinosPendentes.add(origem);
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("❌ Entrada inválida. Formato: nome,origem,destino,prioridade");
-                }
-            }
-        }).start();
-
         while (true) {
+            simularChamadasAutomaticas();
             limparTerminal();
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            desenharPredioFixo(elevador.getAndarAtual(), passageiros);
+
             System.out.println("📟 Painel do Elevador:");
             System.out.println("   Andar Atual: " + elevador.getAndarAtual());
-            System.out.println("   Passageiros: " + passageiros);
-            System.out.println("   Destinos chamados: " + destinoPorPessoa.keySet());
-            System.out.println("   Chamadas pendentes: " + destinosPendentes);
+            System.out.print("   Passageiros: ");
+            System.out.println(passageiros.isEmpty() ? "[nenhum]" : passageiros);
+            System.out.print("   Destinos chamados: ");
+            System.out.println(destinoPorPessoa.isEmpty() ? "[nenhum]" : destinoPorPessoa);
+            System.out.print("   Chamadas pendentes: ");
+            System.out.println(destinosPendentes.isEmpty() ? "[nenhum]" : destinosPendentes);
 
-            desenharPredioFixo(elevador.getAndarAtual(), passageiros);
             desenharGraficoDesembarques(desembarquesPorAndar);
 
             while (!destinosPendentes.isEmpty()) {
@@ -106,6 +77,9 @@ public class Simulacao {
                             int tempoViagem = Math.abs(destino - proximo);
                             int consumo = tempoViagem;
 
+                            System.out.printf("🛗 %s entrou no elevador no andar %d. Indo para o andar %d. Prioridade: %s. Tempo de espera: %ds\n",
+                                nome, proximo, destino, prioridadePorPessoa.get(nome).toUpperCase(), tempoEspera);
+
                             relatorioFinal.add(new RelatorioPessoa(
                                 nome,
                                 prioridadePorPessoa.get(nome).equals("alta") ? Prioridade.ALTA : Prioridade.NORMAL,
@@ -114,7 +88,6 @@ public class Simulacao {
                                 consumo
                             ));
 
-                            System.out.println("🛗 Pegou " + nome + " no andar " + proximo);
                         } else {
                             System.out.println("❌ Capacidade máxima atingida! " + nome + " não pôde entrar.");
                             chamadasExternas.put(proximo, nome + ";" + destino);
@@ -123,7 +96,9 @@ public class Simulacao {
                     } else if (destinoPorPessoa.containsKey(proximo)) {
                         List<String> saindo = destinoPorPessoa.remove(proximo);
                         passageiros.removeAll(saindo);
-                        System.out.println("🚪 Saíram no andar " + proximo + ": " + String.join(", ", saindo));
+                        for (String pessoa : saindo) {
+                            System.out.println("🚪 " + pessoa + " saiu no andar " + proximo + ".");
+                        }
                         desembarquesPorAndar.put(proximo, desembarquesPorAndar.getOrDefault(proximo, 0) + saindo.size());
                     }
                 }
@@ -136,14 +111,35 @@ public class Simulacao {
             }
 
             try {
-                Thread.sleep(1500); // Aguarda 1.5 segundos antes de novo ciclo
+                Thread.sleep(2500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private static int ciclo = 1;
+    private static void simularChamadasAutomaticas() {
+        int chamadas = random.nextInt(3) + 1;
+        for (int i = 0; i < chamadas; i++) {
+            int origem = random.nextInt(TOTAL_ANDARES);
+            int destino;
+            do {
+                destino = random.nextInt(TOTAL_ANDARES);
+            } while (destino == origem);
+
+            String nome = "Pessoa" + contadorPessoas++;
+            String prioridade = random.nextBoolean() ? "alta" : "normal";
+
+            adicionarChamada(nome, origem, destino, prioridade);
+        }
+    }
+
+    private static void adicionarChamada(String nome, int origem, int destino, String prioridade) {
+        prioridadePorPessoa.put(nome, prioridade);
+        momentoChamada.put(nome, ciclo);
+        chamadasExternas.put(origem, nome + ";" + destino);
+        if (!destinosPendentes.contains(origem)) destinosPendentes.add(origem);
+    }
 
     private static void moverElevador(Elevador elevador, int destino) {
         int atual = elevador.getAndarAtual();
@@ -153,7 +149,7 @@ public class Simulacao {
             desenharPredioFixo(atual, passageiros);
             System.out.println("📟 Painel: Andar Atual → " + atual);
             try {
-                Thread.sleep(800);
+                Thread.sleep(1200);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -180,7 +176,6 @@ public class Simulacao {
     }
 
     private static void limparTerminal() {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+        System.out.println("\n\n\n\n\n\n\n\n\n\n");
     }
 }
