@@ -1,5 +1,8 @@
-// Atualizado para lógica de decisão baseada em distância, capacidade e prioridade
+// Atualizado para lógica com relatório completo e prioridade
 package com.bruno.elevador.model;
+
+import com.bruno.elevador.enums.Prioridade;
+import com.bruno.elevador.util.RelatorioCSV;
 
 import java.util.*;
 
@@ -11,18 +14,19 @@ public class Simulacao {
     private static Map<Integer, Integer> desembarquesPorAndar = new HashMap<>();
     private static Map<Integer, String> chamadasExternas = new HashMap<>();
     private static Map<String, String> prioridadePorPessoa = new HashMap<>();
-private static final Scanner scanner = new Scanner(System.in);
+    private static Map<String, Integer> momentoChamada = new HashMap<>();
+    private static List<RelatorioPessoa> relatorioFinal = new ArrayList<>();
+
+    private static final Scanner scanner = new Scanner(System.in);
     private static Painel painel;
     private static Elevador elevador;
     private static final int TOTAL_ANDARES = 10;
     private static final int CAPACIDADE_MAXIMA = 5;
 
     public static void simular() {
-        // Mover elevador para variável de classe
         painel = new Painel(null, 0);
         elevador = new Elevador(CAPACIDADE_MAXIMA, 0, painel);
 
-        // Thread paralela para chamadas enquanto o elevador anda
         new Thread(() -> {
             while (true) {
                 try {
@@ -36,6 +40,7 @@ private static final Scanner scanner = new Scanner(System.in);
                             int destino = Integer.parseInt(partes[2].trim());
                             String prioridade = partes[3].trim().toLowerCase();
                             prioridadePorPessoa.put(nome, prioridade);
+                            momentoChamada.put(nome, ciclo);
 
                             synchronized (Simulacao.class) {
                                 if (origem == destino) return;
@@ -57,15 +62,10 @@ private static final Scanner scanner = new Scanner(System.in);
                 }
             }
         }).start();
-        // já declarado acima como estático
-        int ciclo = 1;
-
-        
 
         while (true) {
             limparTerminal();
             System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println("🕒 CICLO " + ciclo);
             System.out.println("📟 Painel do Elevador:");
             System.out.println("   Andar Atual: " + elevador.getAndarAtual());
             System.out.println("   Passageiros: " + passageiros);
@@ -74,8 +74,6 @@ private static final Scanner scanner = new Scanner(System.in);
 
             desenharPredioFixo(elevador.getAndarAtual(), passageiros);
             desenharGraficoDesembarques(desembarquesPorAndar);
-
-            // chamada manual desativada — substituída por entrada assíncrona
 
             while (!destinosPendentes.isEmpty()) {
                 Integer proximo = null;
@@ -103,6 +101,19 @@ private static final Scanner scanner = new Scanner(System.in);
                             destinoPorPessoa.putIfAbsent(destino, new ArrayList<>());
                             destinoPorPessoa.get(destino).add(nome);
                             if (!destinosPendentes.contains(destino)) destinosPendentes.add(destino);
+
+                            int tempoEspera = ciclo - momentoChamada.getOrDefault(nome, ciclo);
+                            int tempoViagem = Math.abs(destino - proximo);
+                            int consumo = tempoViagem;
+
+                            relatorioFinal.add(new RelatorioPessoa(
+                                nome,
+                                prioridadePorPessoa.get(nome).equals("alta") ? Prioridade.ALTA : Prioridade.NORMAL,
+                                tempoEspera,
+                                tempoViagem,
+                                consumo
+                            ));
+
                             System.out.println("🛗 Pegou " + nome + " no andar " + proximo);
                         } else {
                             System.out.println("❌ Capacidade máxima atingida! " + nome + " não pôde entrar.");
@@ -118,21 +129,21 @@ private static final Scanner scanner = new Scanner(System.in);
                 }
             }
 
-            System.out.print("\nPressione ENTER para próximo ciclo...");
-            scanner.nextLine();
             ciclo++;
-        }
-    }
 
-    private static int lerInt() {
-        while (true) {
+            if (!relatorioFinal.isEmpty()) {
+                RelatorioCSV.exportar(relatorioFinal, "relatorio_elevador.csv");
+            }
+
             try {
-                return Integer.parseInt(scanner.nextLine().trim());
-            } catch (Exception e) {
-                System.out.print("Valor inválido, tente novamente: ");
+                Thread.sleep(1500); // Aguarda 1.5 segundos antes de novo ciclo
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
+
+    private static int ciclo = 1;
 
     private static void moverElevador(Elevador elevador, int destino) {
         int atual = elevador.getAndarAtual();
@@ -147,7 +158,7 @@ private static final Scanner scanner = new Scanner(System.in);
                 e.printStackTrace();
             }
         }
-        }
+    }
 
     private static void desenharPredioFixo(int elevadorNoAndar, List<String> passageiros) {
         System.out.println();
@@ -169,7 +180,7 @@ private static final Scanner scanner = new Scanner(System.in);
     }
 
     private static void limparTerminal() {
-        System.out.print("[H[2J");
+        System.out.print("\033[H\033[2J");
         System.out.flush();
     }
 }

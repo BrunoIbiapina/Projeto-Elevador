@@ -8,5 +8,7 @@
 /Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/model/Painel.java
 /Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/model/Pessoa.java
 /Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/model/Predio.java
+/Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/model/RelatorioPessoa.java
 /Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/model/Simulacao.java
 /Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/service/Main.java
+/Users/brunoibiapina/Desktop/Elevador/elevador/src/main/java/com/bruno/elevador/util/RelatorioCSV.java

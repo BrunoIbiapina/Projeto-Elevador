@@ -25,48 +25,27 @@ public class FilaComPrioridade {
             return;
         }
 
-        if (novaPessoa.getPrioridade() == Prioridade.CADEIRANTE) {
+        if (novaPessoa.getPrioridade() == Prioridade.ALTA) {
+            // Inserir no início da fila
             novoNo.proximo = inicio;
             inicio = novoNo;
-            return;
+        } else {
+            // Inserir no fim da fila
+            fim.proximo = novoNo;
+            fim = novoNo;
         }
-
-        if (novaPessoa.getPrioridade() == Prioridade.IDOSO) {
-            No atual = inicio;
-
-            if (atual.pessoa.getPrioridade() != Prioridade.CADEIRANTE) {
-                novoNo.proximo = inicio;
-                inicio = novoNo;
-                return;
-            }
-
-            while (atual.proximo != null &&
-                    atual.proximo.pessoa.getPrioridade() == Prioridade.CADEIRANTE) {
-                atual = atual.proximo;
-            }
-
-            novoNo.proximo = atual.proximo;
-            atual.proximo = novoNo;
-            return;
-        }
-
-        fim.proximo = novoNo;
-        fim = novoNo;
     }
 
     public Pessoa desenfileirar() {
-        if (inicio == null) {
-            return null;
-        }
+        if (inicio == null) return null;
+
         Pessoa p = inicio.pessoa;
         inicio = inicio.proximo;
-        if (inicio == null) {
-            fim = null;
-        }
+        if (inicio == null) fim = null;
         return p;
     }
 
-    public boolean estraVazia() {
+    public boolean estaVazia() {
         return inicio == null;
     }
 }

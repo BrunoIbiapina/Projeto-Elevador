@@ -28,4 +28,16 @@ public class Painel {
         this.valor = valor;
     }
 
+    public String interpretarChamada() {
+        return switch (tipo) {
+            case UNICO -> "Chamada geral enviada";
+            case DOIS_BOTOES -> (valor == 1 ? "Chamada para subir" : "Chamada para descer");
+            case NUMERICO -> "Chamada para andar " + valor;
+        };
+    }
+
+    @Override
+    public String toString() {
+        return interpretarChamada();
+    }
 }
