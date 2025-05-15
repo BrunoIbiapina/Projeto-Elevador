@@ -1,17 +1,17 @@
 package com.bruno.elevador.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Elevador {
 
     private int capacidadeMaxima;
     private int capacidadeAtual;
-    private String sentido; // subindi, descendo, parado
+    private String sentido;
     private int andarAtual;
     private Painel painel;
     private List<Pessoa> pessoas;
     private List<Integer> listaDePessoas;
+    private Map<Integer, Integer> contagemDesembarques = new HashMap<>();
 
     public Elevador(int capacidadeMaxima, int andarInicial, Painel painel) {
         this.capacidadeMaxima = capacidadeMaxima;
@@ -28,31 +28,73 @@ public class Elevador {
     }
 
     public void abrePorta() {
-        System.out.println("Elevador abrindo as portas no andar" + andarAtual);
+        System.out.println("🚪 Elevador abrindo as portas no andar " + andarAtual);
     }
 
     public void fechaPorta() {
-        System.out.println("Elevador fechando as portas.");
+        System.out.println("🚪 Elevador fechando as portas.\n");
     }
 
     public void irPara(int andar) {
         if (andar == andarAtual) {
-            System.out.println("Elevador já está no andar " + andar);
+            System.out.println("🛗 Elevador já está no andar " + andar);
             return;
         }
+
         if (andar > andarAtual) {
             sentido = "subindo";
-
-        }else{
+        } else {
             sentido = "descendo";
         }
 
-        System.out.println("Elevador indo do andar " + andarAtual + "para o andar" + andar);
+        System.out.println("🛗 Elevador " + sentido + " do andar " + andarAtual + " para o andar " + andar);
         andarAtual = andar;
         painel.setValor(andar);
         sentido = "parado";
     }
 
+    public void adicionarPessoa(Pessoa pessoa) {
+        if (!isLotado()) {
+            pessoas.add(pessoa);
+            capacidadeAtual++;
+            System.out.println("✅ Pessoa " + pessoa.getNome() + " entrou no elevador com destino ao andar " + pessoa.getAndarDestino());
+        } else {
+            System.out.println("❌ Elevador lotado. Pessoa " + pessoa.getNome() + " ficou esperando.");
+        }
+    }
+
+    public void executarCiclo() {
+        if (pessoas.isEmpty()) {
+            System.out.println("🛗 Elevador está vazio. Nenhum destino para atender.");
+            return;
+        }
+
+        abrePorta();
+
+        Iterator<Pessoa> iterator = pessoas.iterator();
+        while (iterator.hasNext()) {
+            Pessoa pessoa = iterator.next();
+            irPara(pessoa.getAndarDestino());
+            abrePorta();
+            System.out.println("👤 Pessoa " + pessoa.getNome() + " saiu no andar " + pessoa.getAndarDestino());
+
+            // Atualiza contagem por andar
+            int destino = pessoa.getAndarDestino();
+            contagemDesembarques.put(destino, contagemDesembarques.getOrDefault(destino, 0) + 1);
+
+            iterator.remove();
+            capacidadeAtual--;
+            fechaPorta();
+        }
+
+        fechaPorta();
+    }
+
+    public Map<Integer, Integer> getContagemDesembarques() {
+        return contagemDesembarques;
+    }
+
+    // Getters e Setters
     public int getCapacidadeMaxima() {
         return capacidadeMaxima;
     }
@@ -108,7 +150,4 @@ public class Elevador {
     public void setListaDePessoas(List<Integer> listaDePessoas) {
         this.listaDePessoas = listaDePessoas;
     }
-
-    
-
 }

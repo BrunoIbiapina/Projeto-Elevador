@@ -1,7 +1,10 @@
 package com.bruno.elevador.model;
 
+
 import com.bruno.elevador.enums.TipodeComportamento;
 import java.util.List;
+
+// Vai definir como o elevador vai se comportar
 
 public class CentrodeControle {
 
