@@ -1,4 +1,4 @@
-// Atualizado para simular com apenas um painel fixo
+// Atualizado para exibir o consumo total de energia no terminal
 package com.bruno.elevador.model;
 
 import com.bruno.elevador.enums.Prioridade;
@@ -24,6 +24,7 @@ public class Simulacao {
     private static int ciclo = 1;
     private static final Random random = new Random();
     private static int contadorPessoas = 1;
+    private static int consumoTotalEnergia = 0;
 
     public static void simular() {
         painel = new Painel(null, 0);
@@ -43,6 +44,17 @@ public class Simulacao {
             System.out.println(destinoPorPessoa.isEmpty() ? "[nenhum]" : destinoPorPessoa);
             System.out.print("   Chamadas pendentes: ");
             System.out.println(destinosPendentes.isEmpty() ? "[nenhum]" : destinosPendentes);
+            System.out.println("⚡ Consumo total de energia: " + consumoTotalEnergia + " kWh");
+            if (!relatorioFinal.isEmpty()) {
+                double media = (double) consumoTotalEnergia / relatorioFinal.size();
+                System.out.printf("⚖️  Média de consumo por pessoa: %.2f kWh", media);
+                long alta = relatorioFinal.stream().filter(r -> r.getPrioridade() == Prioridade.ALTA).count();
+                long normal = relatorioFinal.size() - alta;
+                double mediaAlta = relatorioFinal.stream().filter(r -> r.getPrioridade() == Prioridade.ALTA).mapToInt(RelatorioPessoa::getConsumoEnergia).average().orElse(0);
+                double mediaNormal = relatorioFinal.stream().filter(r -> r.getPrioridade() == Prioridade.NORMAL).mapToInt(RelatorioPessoa::getConsumoEnergia).average().orElse(0);
+                System.out.printf("👥 Pessoas com prioridade ALTA: %d | Média: %.2f kWh", alta, mediaAlta);
+                System.out.printf("👥 Pessoas com prioridade NORMAL: %d | Média: %.2f kWh", normal, mediaNormal);
+            }
 
             desenharGraficoDesembarques(desembarquesPorAndar);
 
@@ -60,7 +72,7 @@ public class Simulacao {
                 }
 
                 if (proximo != null) {
-                    moverElevador(elevador, proximo);
+                    consumoTotalEnergia += moverElevador(elevador, proximo);
                     destinosPendentes.remove(proximo);
 
                     if (chamadasExternas.containsKey(proximo)) {
@@ -73,7 +85,7 @@ public class Simulacao {
                             destinoPorPessoa.get(destino).add(nome);
                             if (!destinosPendentes.contains(destino)) destinosPendentes.add(destino);
 
-                            int tempoEspera = ciclo - momentoChamada.getOrDefault(nome, ciclo);
+                            int tempoEspera = Math.max(0, ciclo - momentoChamada.getOrDefault(nome, ciclo));
                             int tempoViagem = Math.abs(destino - proximo);
                             int consumo = tempoViagem;
 
@@ -136,24 +148,30 @@ public class Simulacao {
 
     private static void adicionarChamada(String nome, int origem, int destino, String prioridade) {
         prioridadePorPessoa.put(nome, prioridade);
-        momentoChamada.put(nome, ciclo);
+        momentoChamada.put(nome, ciclo + 1);
         chamadasExternas.put(origem, nome + ";" + destino);
         if (!destinosPendentes.contains(origem)) destinosPendentes.add(origem);
     }
 
-    private static void moverElevador(Elevador elevador, int destino) {
+    private static int moverElevador(Elevador elevador, int destino) {
+        int origem = elevador.getAndarAtual();
         int atual = elevador.getAndarAtual();
+        int consumo = 0;
         while (atual != destino && destino >= 0 && destino < TOTAL_ANDARES) {
             atual += (destino > atual) ? 1 : -1;
             elevador.setAndarAtual(atual);
             desenharPredioFixo(atual, passageiros);
             System.out.println("📟 Painel: Andar Atual → " + atual);
+            consumo++;
             try {
                 Thread.sleep(1200);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        consumoPorAndar.put(origem, consumoPorAndar.getOrDefault(origem, 0) + consumo);
+        System.out.println("⚡ Deslocamento do andar " + origem + " até o andar " + destino + " consumiu " + consumo + " kWh");
+        return consumo;
     }
 
     private static void desenharPredioFixo(int elevadorNoAndar, List<String> passageiros) {
@@ -167,11 +185,23 @@ public class Simulacao {
     }
 
     private static void desenharGraficoDesembarques(Map<Integer, Integer> mapa) {
+        desenharGraficoConsumoEnergia();
         System.out.println("\n📊 Desembarques por andar:");
         for (int i = 0; i < TOTAL_ANDARES; i++) {
             int count = mapa.getOrDefault(i, 0);
             String barras = "█".repeat(count);
             System.out.printf("Andar %2d: %s (%d)\n", i, barras, count);
+        }
+    }
+
+    private static final Map<Integer, Integer> consumoPorAndar = new HashMap<>();
+
+    private static void desenharGraficoConsumoEnergia() {
+        System.out.println("⚡ Consumo de energia por deslocamento em cada andar:");
+        for (int i = 0; i < TOTAL_ANDARES; i++) {
+            int consumo = consumoPorAndar.getOrDefault(i, 0);
+            String barras = "█".repeat(consumo);
+            System.out.printf("Andar %2d: %s (%d kWh)", i, barras, consumo);
         }
     }
 
