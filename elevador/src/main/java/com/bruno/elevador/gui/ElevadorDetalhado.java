@@ -20,6 +20,7 @@ public class ElevadorDetalhado extends JPanel {
     }
 
     private static class Passageiro {
+        long tempoEntradaElevador;
         String nome;
         int origem;
         int destino;
@@ -42,7 +43,7 @@ public class ElevadorDetalhado extends JPanel {
     private final Timer animacaoPorta;
     private final java.util.Map<Integer, Integer> consumoPorAndar = new java.util.HashMap<>();
     private long tempoUltimaTroca = System.currentTimeMillis();
-    private final java.util.List<Long> temposDeDeslocamento = new java.util.ArrayList<>();
+    private final java.util.List<Double> temposDeDeslocamento = new java.util.ArrayList<>();
 
     public ElevadorDetalhado() {
         Timer[] portaHolder = new Timer[1];
@@ -52,41 +53,36 @@ public class ElevadorDetalhado extends JPanel {
             portaHolder[0].stop();
         });
         this.animacaoPorta = portaHolder[0];
-        // linha removida: 'porta' não existe, animacaoPorta já foi atribuído acima
 
         Timer mover = new Timer(2500, e -> {
             int novoAndar = new Random().nextInt(totalAndares);
-            // mover antes de atualizar andarAtual
             int consumo = Math.abs(andarAtual - novoAndar);
             consumoPorAndar.put(novoAndar, consumoPorAndar.getOrDefault(novoAndar, 0) + consumo);
             if (novoAndar != andarAtual) {
-                // Desembarcar passageiros
                 java.util.List<Passageiro> saindo = new java.util.ArrayList<>();
                 for (Passageiro p : passageiros) {
                     if (p.destino == novoAndar) {
-                        String msg = "🚪 " + p.nome + " saiu no andar " + novoAndar + " (Origem: " + p.origem + ", Destino: " + p.destino + ")";
-                        System.out.println(msg);
+                        long tempoSaida = System.currentTimeMillis();
+                        double tempoViagem = (tempoSaida - p.tempoEntradaElevador) / 1000.0;
+                        temposDeDeslocamento.add(tempoViagem);
+                        String msg = String.format("\uD83D\uDEAA %s saiu no andar %d (Tempo: %.2f s, Origem: %d, Destino: %d)",
+                                p.nome, novoAndar, tempoViagem, p.origem, p.destino);
                         logs.add(msg);
                         saindo.add(p);
                     }
                 }
                 passageiros.removeAll(saindo);
 
-                // Embarcar passageiros
                 for (Passageiro p : passageiros) {
                     if (p.origem == novoAndar && p.destino != novoAndar) {
+                        p.tempoEntradaElevador = System.currentTimeMillis();
                         String msg = "✅ " + p.nome + " entrou no elevador no andar " + novoAndar + " indo para " + p.destino;
                         System.out.println(msg);
                         logs.add(msg);
                     }
                 }
-                long tempoAtual = System.currentTimeMillis();
-                long duracao = tempoAtual - tempoUltimaTroca;
-                temposDeDeslocamento.add(duracao);
-                tempoUltimaTroca = tempoAtual;
                 andarAtual = novoAndar;
                 portasAbertas = true;
-                // já contabilizado acima, remover duplicação
                 repaint();
                 animacaoPorta.restart();
             }
@@ -103,7 +99,6 @@ public class ElevadorDetalhado extends JPanel {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Desenhar prédio
         for (int i = totalAndares - 1; i >= 0; i--) {
             int y = 30 + (totalAndares - 1 - i) * 60;
             g2.setColor(Color.DARK_GRAY);
@@ -115,8 +110,6 @@ public class ElevadorDetalhado extends JPanel {
             if (i == andarAtual) {
                 g2.setColor(Color.LIGHT_GRAY);
                 g2.fillRect(82, y + 2, 156, 46);
-
-                // Portas animadas
                 if (portasAbertas) {
                     g2.setColor(Color.GRAY);
                     g2.fillRect(82, y + 2, 75, 46);
@@ -125,15 +118,12 @@ public class ElevadorDetalhado extends JPanel {
                     g2.setColor(Color.GRAY);
                     g2.fillRect(82, y + 2, 156, 46);
                 }
-
-                // Painel digital no elevador
                 g2.setColor(Color.RED);
                 g2.setFont(new Font("Monospaced", Font.BOLD, 12));
                 g2.drawString("[🛗]", 140, y + 30);
             }
         }
 
-        // Painel lateral digital
         g2.setColor(Color.GREEN);
         g2.drawString("-- Gráfico de Consumo --", 520, 50);
         int xBar = 520;
@@ -149,9 +139,9 @@ public class ElevadorDetalhado extends JPanel {
         int totalConsumo = consumoPorAndar.values().stream().mapToInt(Integer::intValue).sum();
         g2.drawString("-- Consumo por Andar --", 310, 480);
         if (!temposDeDeslocamento.isEmpty()) {
-            long soma = temposDeDeslocamento.stream().mapToLong(Long::longValue).sum();
-            long media = soma / temposDeDeslocamento.size();
-            g2.drawString("Média deslocamento: " + media + " ms", 310, 465);
+            double soma = temposDeDeslocamento.stream().mapToDouble(Double::doubleValue).sum();
+            double media = soma / temposDeDeslocamento.size();
+            g2.drawString("Média deslocamento: " + String.format("%.2f", media) + " s", 310, 450);
         }
         g2.drawString("Total: " + totalConsumo + " kWh", 310, 495);
         int yC = 510;
@@ -169,12 +159,18 @@ public class ElevadorDetalhado extends JPanel {
         g2.drawString("Portas: " + (portasAbertas ? "Abertas" : "Fechadas"), 310, 100);
 
         g2.drawString("-- Passageiros --", 310, 130);
-        g2.drawString("-- Últimas Ações --", 310, 630);
-        int yL = 650;
+        g2.drawString("-- Últimas Ações --", 310, 680);
+        int yL = 700;
         int logSize = logs.size();
         for (int i = Math.max(0, logSize - 5); i < logSize; i++) {
-            g2.drawString(logs.get(i), 310, yL);
-            yL += 18;
+            String log = logs.get(i);
+            if (log.contains("saiu")) {
+                g2.setColor(Color.RED);
+            } else {
+                g2.setColor(Color.GREEN);
+            }
+            g2.drawString(log, 310, yL);
+            yL += 20;
         }
         int yP = 150;
         for (Passageiro p : passageiros) {
@@ -187,7 +183,7 @@ public class ElevadorDetalhado extends JPanel {
     public static void main(String[] args) {
         JFrame frame = new JFrame("Elevador Visual Detalhado");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(520, 700);
+        frame.setSize(1040, 750);
         frame.add(new ElevadorDetalhado());
         frame.setVisible(true);
     }
