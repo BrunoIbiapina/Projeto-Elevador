@@ -42,7 +42,6 @@ public class ElevadorDetalhado extends JPanel {
     private final Random random = new Random();
     private final Timer animacaoPorta;
     private final java.util.Map<Integer, Integer> consumoPorAndar = new java.util.HashMap<>();
-    private long tempoUltimaTroca = System.currentTimeMillis();
     private final java.util.List<Double> temposDeDeslocamento = new java.util.ArrayList<>();
 
     public ElevadorDetalhado() {
@@ -77,7 +76,6 @@ public class ElevadorDetalhado extends JPanel {
                     if (p.origem == novoAndar && p.destino != novoAndar) {
                         p.tempoEntradaElevador = System.currentTimeMillis();
                         String msg = "✅ " + p.nome + " entrou no elevador no andar " + novoAndar + " indo para " + p.destino;
-                        System.out.println(msg);
                         logs.add(msg);
                     }
                 }
@@ -124,9 +122,26 @@ public class ElevadorDetalhado extends JPanel {
             }
         }
 
+        g2.setColor(Color.BLACK);
+        g2.fillRect(300, 30, 240, 700);
         g2.setColor(Color.GREEN);
-        g2.drawString("-- Gráfico de Consumo --", 520, 50);
-        int xBar = 520;
+        g2.setFont(new Font("Monospaced", Font.BOLD, 14));
+        g2.drawString("== Painel Digital ==", 310, 50);
+        g2.drawString("Andar atual: " + andarAtual, 310, 80);
+        g2.drawString("Portas: " + (portasAbertas ? "Abertas" : "Fechadas"), 310, 100);
+
+        g2.drawString("-- Passageiros --", 310, 130);
+        int yP = 150;
+        for (Passageiro p : passageiros) {
+            if (yP > 500) break;
+            g2.drawString(p.nome + " " + p.origem + "→" + p.destino + ("ALTA".equals(p.prioridade) ? " 🔴" : ""), 310, yP);
+            yP += 20;
+        }
+
+        double totalConsumo = consumoPorAndar.values().stream().mapToInt(Integer::intValue).sum();
+        g2.setColor(Color.BLUE);
+        g2.drawString("-- Gráfico de Consumo --", 560, 50);
+        int xBar = 560;
         int yBar = 70;
         for (int i = 0; i < totalAndares; i++) {
             int consumo = consumoPorAndar.getOrDefault(i, 0);
@@ -135,55 +150,41 @@ public class ElevadorDetalhado extends JPanel {
             g2.setColor(Color.GREEN);
             g2.drawString("Andar " + i + " (" + consumo + " kWh)", xBar + consumo * 10 + 5, yBar + i * 20 + 12);
         }
-        g2.setColor(Color.GREEN);
-        int totalConsumo = consumoPorAndar.values().stream().mapToInt(Integer::intValue).sum();
-        g2.drawString("-- Consumo por Andar --", 310, 480);
+
+        g2.setColor(Color.BLUE);
+        int yC = yBar + totalAndares * 20 + 40;
+        g2.drawString("-- Consumo por Andar --", 560, yC);
+        yC += 20;
         if (!temposDeDeslocamento.isEmpty()) {
             double soma = temposDeDeslocamento.stream().mapToDouble(Double::doubleValue).sum();
             double media = soma / temposDeDeslocamento.size();
-            g2.drawString("Média deslocamento: " + String.format("%.2f", media) + " s", 310, 450);
+            g2.drawString("Média deslocamento: " + String.format("%.2f", media) + " s", 560, yC);
+            yC += 20;
         }
-        g2.drawString("Total: " + totalConsumo + " kWh", 310, 495);
-        int yC = 510;
+        g2.drawString("Total: " + String.format("%.0f", totalConsumo) + " kWh", 560, yC);
+        yC += 20;
         for (int i = 0; i < totalAndares; i++) {
             int c = consumoPorAndar.getOrDefault(i, 0);
-            g2.drawString("Andar " + i + ": " + c + " kWh", 310, yC);
+            g2.drawString("Andar " + i + ": " + c + " kWh", 560, yC);
             yC += 15;
         }
-        g2.setColor(Color.BLACK);
-        g2.fillRect(300, 30, 200, 500);
-        g2.setColor(Color.GREEN);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 14));
-        g2.drawString("== Painel Digital ==", 310, 50);
-        g2.drawString("Andar atual: " + andarAtual, 310, 80);
-        g2.drawString("Portas: " + (portasAbertas ? "Abertas" : "Fechadas"), 310, 100);
 
-        g2.drawString("-- Passageiros --", 310, 130);
-        g2.drawString("-- Últimas Ações --", 310, 680);
-        int yL = 700;
+        g2.setColor(Color.GREEN);
+        g2.drawString("-- Últimas Ações --", 560, yC + 20);
+        int yL = yC + 40;
         int logSize = logs.size();
         for (int i = Math.max(0, logSize - 5); i < logSize; i++) {
             String log = logs.get(i);
-            if (log.contains("saiu")) {
-                g2.setColor(Color.RED);
-            } else {
-                g2.setColor(Color.GREEN);
-            }
-            g2.drawString(log, 310, yL);
+            g2.setColor(log.contains("saiu") ? Color.RED : Color.GREEN);
+            g2.drawString(log, 560, yL);
             yL += 20;
-        }
-        int yP = 150;
-        for (Passageiro p : passageiros) {
-            if (yP > 500) break;
-            g2.drawString(p.nome + " " + p.origem + "→" + p.destino + ("ALTA".equals(p.prioridade) ? " 🔴" : ""), 310, yP);
-            yP += 20;
         }
     }
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Elevador Visual Detalhado");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1040, 750);
+        frame.setSize(1300, 900);
         frame.add(new ElevadorDetalhado());
         frame.setVisible(true);
     }
